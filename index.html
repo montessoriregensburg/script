@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pi & Gi Master Pro: Vault Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --bg: #f2f2f7; --text: #1c1c1e; --card: #ffffff; --primary: #007aff; 
+            --gi-color: #5856d6; --accent: #34c759; --red: #ff3b30; --gold: #ffcc00;
+        }
+        /* Dynamische Themes aus dem Script */
+        .theme-matrix { --primary: #00ff00; --bg: #000d00; --text: #00ff00; --card: #001a00; }
+        .theme-blood { --primary: #ff0000; --bg: #1a0000; --text: #ff0000; --card: #2a0000; }
+        .theme-ocean { --primary: #00aaff; --bg: #001a33; --text: #ffffff; --card: #003366; }
+        .theme-cyber { --primary: #ff00ff; --bg: #1a001a; --text: #00ffff; --card: #330033; }
+        .theme-gold { --primary: #ffcc00; --bg: #1a1a00; --text: #ffcc00; --card: #333300; }
+        .theme-forest { --primary: #2ecc71; --bg: #0b1a11; --text: #ecf0f1; --card: #143021; }
+        .theme-sunset { --primary: #e67e22; --bg: #2c3e50; --text: #f1c40f; --card: #34495e; }
+        .theme-lavender { --primary: #9b59b6; --bg: #f3e5f5; --text: #4a148c; --card: #ffffff; }
+
+        .dark-mode:not([class*="theme-"]) { --bg: #000000; --text: #ffffff; --card: #1c1c1e; --primary: #0a84ff; --gi-color: #5e5ce6; }
+        
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; transition: 0.3s; overflow-x: hidden; }
+        header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; background: var(--card); border-bottom: 1px solid rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
+        .container { padding: 16px; max-width: 500px; margin: 0 auto; padding-bottom: 80px; }
+        
+        .view { display: none; }
+        .view.active { display: block; animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .card { background: var(--card); border-radius: 24px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 16px; }
+        .coin-display { font-family: 'JetBrains Mono'; font-size: 0.8rem; text-align: right; line-height: 1.2; }
+
+        .display-screen { height: 100px; background: var(--bg); border-radius: 18px; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; padding: 0 20px; overflow: hidden; margin-bottom: 15px; border: 2px solid var(--primary); }
+        #output { font-family: 'JetBrains Mono'; font-size: 2rem; white-space: nowrap; }
+        #timer-text { font-family: 'JetBrains Mono'; font-size: 0.8rem; opacity: 0.6; }
+
+        .keyboard { display: grid; gap: 8px; margin-top: 10px; }
+        .num-pad { grid-template-columns: repeat(3, 1fr); }
+        .alpha-pad { grid-template-columns: repeat(6, 1fr); }
+        
+        .key { background: var(--bg); border: 1px solid rgba(128,128,128,0.2); border-radius: 12px; padding: 15px 5px; font-size: 1.1rem; font-weight: 600; color: var(--text); cursor: pointer; transition: 0.1s; }
+        .key:active { background: var(--primary); color: white; transform: scale(0.95); }
+
+        .btn { width: 100%; padding: 16px; border-radius: 16px; border: none; font-weight: 700; margin-bottom: 10px; cursor: pointer; font-size: 1rem; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+
+        .shop-grid { display: grid; grid-template-columns: 1fr; gap: 10px; max-height: 400px; overflow-y: auto; padding-right: 5px; }
+        .shop-item { background: var(--bg); padding: 15px; border-radius: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(128,128,128,0.1); }
+        .price { background: var(--gold); color: #000; padding: 5px 10px; border-radius: 8px; font-weight: 800; font-size: 0.8rem; border:none; cursor:pointer;}
+
+        .tab-bar { display: flex; background: var(--bg); border-radius: 12px; padding: 4px; margin-bottom: 15px; }
+        .tab-item { flex: 1; padding: 10px; border: none; border-radius: 9px; background: transparent; color: var(--text); font-weight: 600; cursor: pointer; }
+        .tab-item.active { background: var(--card); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+<header>
+    <div style="font-weight: 800; font-size: 1rem;" onclick="showView('menu')">π&GI PRO</div>
+    <div class="coin-display">
+        <div id="pi-coins" style="color:var(--primary)">π-Points: 0</div>
+        <div id="gi-coins" style="color:var(--gi-color)">GI-Points: 0</div>
+    </div>
+</header>
+
+<div class="container">
+    <div id="menu" class="view active">
+        <div class="card">
+            <button class="btn btn-primary" onclick="startSession('pi')">Pi Training</button>
+            <button class="btn btn-primary" style="background:var(--gi-color)" onclick="startSession('gi')">Gi Training</button>
+        </div>
+        <div class="card" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <button class="btn btn-outline" onclick="showView('shop')">🛒 Shop</button>
+            <button class="btn btn-outline" onclick="showView('stats')">📊 Stats</button>
+            <button class="btn btn-outline" onclick="showView('lexicon')">🧠 Bilder</button>
+            <button class="btn btn-outline" onclick="showView('settings')">⚙️ Setup</button>
+        </div>
+    </div>
+
+    <div id="session" class="view">
+        <div class="card">
+            <div class="tab-bar">
+                <button id="t-learn" class="tab-item active" onclick="setSubMode('learn')">Lernen</button>
+                <button id="t-test" class="tab-item" onclick="setSubMode('test')">Testen</button>
+            </div>
+            <div id="area-learn">
+                <div id="tableGrid" style="display:grid; grid-template-columns: repeat(5,1fr); gap:5px;"></div>
+            </div>
+            <div id="area-test" style="display:none">
+                <div class="display-screen">
+                    <div id="timer-text">0.0s | 0 ZPM</div>
+                    <div id="output">3,</div>
+                </div>
+                <div id="hintText" style="text-align:center; height:20px; color:var(--primary); font-weight:700; margin-bottom:10px;"></div>
+                <div id="pi-keyboard" class="keyboard num-pad"></div>
+                <div id="gi-keyboard" class="keyboard alpha-pad" style="display:none"></div>
+            </div>
+            <button class="btn btn-outline" style="margin-top:20px; border-color:#8e8e93; color:#8e8e93" onclick="stopSession()">Zurück zum Menü</button>
+        </div>
+    </div>
+
+    <div id="shop" class="view">
+        <div class="card">
+            <h3>🎨 Design Shop (200+ Items)</h3>
+            <div class="shop-grid" id="shopList"></div>
+        </div>
+        <button class="btn btn-primary" onclick="showView('menu')">Zurück</button>
+    </div>
+
+    <div id="settings" class="view">
+        <div class="card">
+            <h3>Ausrüstung</h3>
+            <div id="inventoryList" style="display:flex; flex-direction:column; gap:5px;"></div>
+        </div>
+        <div class="card">
+            <button class="btn btn-outline" onclick="toggleDark()">🌓 Design-Mode</button>
+            <button class="btn btn-outline" style="color:var(--red); border-color:var(--red)" onclick="resetAll()">Reset Alle Daten</button>
+        </div>
+        <button class="btn btn-primary" onclick="showView('menu')">Zurück</button>
+    </div>
+
+    <div id="stats" class="view">
+        <div class="card">
+            <canvas id="mainChart"></canvas>
+            <div style="text-align:center; margin-top:10px;"><small id="bestZPM">Beste Speed: 0 ZPM</small></div>
+        </div>
+        <button class="btn btn-primary" onclick="showView('menu')">Zurück</button>
+    </div>
+</div>
+
+<script>
+    const PI_DATA = "1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679821480865132823066470938446095505822317253594081284811174502841027019385211055596446229489549303819644288109756659334461284756482337867831652712019091456485669234603486104543266482133936072602491412737245870066063155881748815209209628292540917153643678925903600113305305488204665213841469519415116094330572703657595919530921861173819326117931051185480744623799627495673518857527248912279381830119491";
+    const GI_DATA = (function(){let r="",s=123,c="ABCDEFGHIJKLMNOPQRSTUVWXYZ";for(let i=0;i<5000;i++){s=(s*9301+49297)%233280;r+=c[Math.floor((s/233280)*c.length)]}return r})();
+
+    // SHOP GENERATOR FÜR 200+ ITEMS
+    const THEMES = ['theme-matrix', 'theme-blood', 'theme-ocean', 'theme-cyber', 'theme-gold', 'theme-forest', 'theme-sunset', 'theme-lavender'];
+    const SHOP_CONTENT = [];
+    for(let i=1; i<=210; i++) {
+        const type = i % 2 === 0 ? 'pi' : 'gi';
+        const themeIdx = i % THEMES.length;
+        SHOP_CONTENT.push({
+            id: 'item_' + i,
+            name: 'Vault Style #' + i,
+            price: 50 + (i * 5),
+            type: type,
+            class: THEMES[themeIdx]
+        });
+    }
+
+    let state = {
+        piCoins: parseInt(localStorage.getItem('pi_c') || 0),
+        giCoins: parseInt(localStorage.getItem('gi_c') || 0),
+        owned: JSON.parse(localStorage.getItem('owned') || '["default"]'),
+        activeTheme: localStorage.getItem('cur_theme') || 'default',
+        history: JSON.parse(localStorage.getItem('run_h') || '[]')
+    };
+
+    let curMode = 'pi', subMode = 'learn', input = "", startTime = null, timerInt = null;
+
+    function showView(id) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(id === 'shop') renderShop();
+        if(id === 'settings') renderInventory();
+        if(id === 'stats') drawStats();
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('pi-coins').textContent = `π-Points: ${state.piCoins}`;
+        document.getElementById('gi-coins').textContent = `GI-Points: ${state.giCoins}`;
+        document.body.className = state.activeTheme === 'default' ? '' : state.activeTheme;
+        if(localStorage.getItem('dark') === 'true') document.body.classList.add('dark-mode');
+    }
+
+    function startSession(m) {
+        curMode = m; showView('session'); setSubMode('learn');
+        renderKeyboards();
+    }
+
+    function setSubMode(s) {
+        subMode = s; input = ""; clearInterval(timerInt);
+        document.getElementById('area-learn').style.display = s==='learn'?'block':'none';
+        document.getElementById('area-test').style.display = s==='test'?'block':'none';
+        document.getElementById('t-learn').classList.toggle('active', s==='learn');
+        document.getElementById('t-test').classList.toggle('active', s==='test');
+        document.getElementById('output').textContent = curMode==='pi'?'3,':'START';
+        document.getElementById('pi-keyboard').style.display = (s==='test' && curMode==='pi')?'grid':'none';
+        document.getElementById('gi-keyboard').style.display = (s==='test' && curMode==='gi')?'grid':'none';
+        if(s==='learn') renderTable();
+    }
+
+    function renderTable() {
+        const d = curMode==='pi'?PI_DATA:GI_DATA;
+        const cont = document.getElementById('tableGrid');
+        cont.innerHTML = "";
+        for(let i=0; i<100; i++) {
+            cont.innerHTML += `<div style="background:var(--bg); padding:8px; border-radius:8px; text-align:center; font-family:'JetBrains Mono'; font-weight:bold;">${d[i]}</div>`;
+        }
+    }
+
+    function renderKeyboards() {
+        const pK = document.getElementById('pi-keyboard');
+        const gK = document.getElementById('gi-keyboard');
+        pK.innerHTML = ""; gK.innerHTML = "";
+        [1,2,3,4,5,6,7,8,9,0].forEach(n => pK.innerHTML += `<button class="key" onclick="handleInput('${n}')">${n}</button>`);
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach(l => gK.innerHTML += `<button class="key" style="font-size:0.7rem;" onclick="handleInput('${l}')">${l}</button>`);
+    }
+
+    // MULTI-SUPPORT: TASTATUR + UI
+    window.addEventListener('keydown', (e) => {
+        if(subMode === 'test' && document.getElementById('session').classList.contains('active')) {
+            const key = e.key.toUpperCase();
+            if(curMode === 'pi' && /[0-9]/.test(key)) handleInput(key);
+            if(curMode === 'gi' && /[A-Z]/.test(key)) handleInput(key);
+        }
+    });
+
+    function handleInput(val) {
+        if(!startTime || input === "") startTime = Date.now();
+        if(!timerInt) timerInt = setInterval(updateTimer, 100);
+
+        const data = curMode==='pi'?PI_DATA:GI_DATA;
+        if(val === data[input.length]) {
+            input += val;
+            document.getElementById('output').innerHTML = `<span style="color:var(--accent)">${curMode==='pi'?'3,':''}${input}</span>`;
+            if(curMode==='pi') state.piCoins++; else state.giCoins++;
+            saveData(); updateUI();
+        } else {
+            finishRun();
+            alert("Fehler! Erwartet: " + data[input.length]);
+            setSubMode('test');
+        }
+    }
+
+    function updateTimer() {
+        let sec = (Date.now() - startTime) / 1000;
+        let zpm = Math.round((input.length / (sec/60))) || 0;
+        document.getElementById('timer-text').textContent = `${sec.toFixed(1)}s | ${zpm} ZPM`;
+    }
+
+    function finishRun() {
+        clearInterval(timerInt);
+        if(input.length > 0) {
+            let sec = (Date.now() - startTime) / 1000;
+            let zpm = Math.round((input.length / (sec/60)));
+            state.history.push({score: input.length, zpm: zpm, date: new Date().toLocaleDateString()});
+            if(state.history.length > 20) state.history.shift();
+            saveData();
+        }
+        startTime = null; timerInt = null;
+    }
+
+    function renderShop() {
+        const list = document.getElementById('shopList'); list.innerHTML = "";
+        SHOP_CONTENT.forEach(item => {
+            const owned = state.owned.includes(item.id);
+            list.innerHTML += `
+                <div class="shop-item">
+                    <span style="font-size:0.9rem">${item.name} <small>(${item.type.toUpperCase()})</small></span>
+                    ${owned ? '<span>✅</span>' : `<button class="price" onclick="buy('${item.id}')">${item.price}</button>`}
+                </div>`;
+        });
+    }
+
+    function buy(id) {
+        const item = SHOP_CONTENT.find(i => i.id === id);
+        const coinKey = item.type === 'pi' ? 'piCoins' : 'giCoins';
+        if(state[coinKey] >= item.price) {
+            state[coinKey] -= item.price;
+            state.owned.push(id);
+            saveData(); renderShop(); confetti();
+        } else { alert("Punkte reichen nicht!"); }
+    }
+
+    function renderInventory() {
+        const list = document.getElementById('inventoryList'); list.innerHTML = "";
+        state.owned.forEach(id => {
+            const item = SHOP_CONTENT.find(i => i.id === id) || {name: 'Standard', class: 'default'};
+            const active = state.activeTheme === item.class;
+            list.innerHTML += `<button class="btn" style="background:${active?'var(--primary)':'var(--card)'}; color:${active?'white':'var(--text)'}" onclick="equip('${item.class}')">${item.name}</button>`;
+        });
+    }
+
+    function equip(cls) { state.activeTheme = cls; saveData(); renderInventory(); updateUI(); }
+    function saveData() {
+        localStorage.setItem('pi_c', state.piCoins);
+        localStorage.setItem('gi_c', state.giCoins);
+        localStorage.setItem('owned', JSON.stringify(state.owned));
+        localStorage.setItem('cur_theme', state.activeTheme);
+        localStorage.setItem('run_h', JSON.stringify(state.history));
+    }
+
+    let chart = null;
+    function drawStats() {
+        const ctx = document.getElementById('mainChart');
+        if(chart) chart.destroy();
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: state.history.map(h=>h.date), datasets: [{label: 'ZPM Speed', data: state.history.map(h=>h.zpm), borderColor: '#007aff', fill: false}] }
+        });
+        document.getElementById('bestZPM').textContent = "Beste Speed: " + Math.max(...state.history.map(h=>h.zpm), 0) + " ZPM";
+    }
+
+    function toggleDark() { localStorage.setItem('dark', localStorage.getItem('dark')!=='true'); updateUI(); }
+    function stopSession() { finishRun(); showView('menu'); }
+    function resetAll() { if(confirm("Daten löschen?")) { localStorage.clear(); location.reload(); } }
+
+    updateUI();
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+ 
